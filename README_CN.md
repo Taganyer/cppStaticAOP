@@ -1,3 +1,20 @@
+[English version](README.md)
+# cppStaticAOP
+
+**一个简单、易用的C++静态AOP组件**
+
+* **增强**：cppStaticAOP 是一简单的 C++ 切面模板，你可以通过使用它来增强某一个函数或类的功能。
+* **无侵入**：组件是无侵入式的，原有业务逻辑代码不需要作任何改动，就能够轻松使用，从根本上解耦合，避免横切逻辑代码重复。
+* **静态编译**：切面模板将会在编译期将切面代码嵌入主业务代码中，运行时不会有太多的性能损失。
+* **简单易用**：组件使用简单，使用方法多样，同时支持多种构造方式，不会对原有对象功能带来任何影响。
+
+## 使用环境要求：
+* C++17及以上
+* gcc / clang
+
+## 使用示例：
+
+```c++
 #include <iostream>
 #include "AOP_src/AOP.hpp"
 
@@ -61,10 +78,10 @@ int main() {
         void error(const std::exception_ptr &) const {
             cerr << "const A1 error in the: " << Base::AOPthreadLoc.function() << endl;
         };
-
+        
         void destroy() {
             cout << "destroy fun" << endl;
-        }
+        };
     };
 
     AOP aop { A1(), A1() };
@@ -115,3 +132,67 @@ int main() {
 #endif
     return 0;
 }
+```
+### 可能的运行结果
+```text
+A1 before the: unknown
+A1 before the: unknown
+lambda fun
+A1 after the: main()::<lambda()>
+A1 after the: main()::<lambda()>
+
+A1 before the: unknown
+A1 const before the: unknown
+int main()::A::fun(int&)
+A1 const after the: int main()::A::fun(int&)
+A1 after the: int main()::A::fun(int&)
+
+A1 before the: unknown
+A1 const before the: unknown
+int main()::A::fun(int&) const
+A1 const after the: int main()::A::fun(int&) const
+A1 after the: int main()::A::fun(int&) const
+
+A1 before the: unknown
+A1 const before the: unknown
+int main()::A::fun(int&)
+A1 const after the: int main()::A::fun(int&)
+A1 after the: int main()::A::fun(int&)
+
+A1 const before the: unknown
+A1 const before the: unknown
+int main()::A::fun(int&) const
+A1 const after the: int main()::A::fun(int&) const
+A1 const after the: int main()::A::fun(int&) const
+
+A1 before the: unknown
+A1 const before the: unknown
+int main()::A::fun(int&)
+A1 const after the: int main()::A::fun(int&)
+A1 after the: int main()::A::fun(int&)
+
+A1 before the: unknown
+A1 const before the: unknown
+int main()::A::fun(int&) const
+A1 const after the: int main()::A::fun(int&) const
+A1 after the: int main()::A::fun(int&) const
+
+A1 before the: unknown
+A1 const before the: unknown
+int main()::A::fun(int&)
+A1 const after the: int main()::A::fun(int&)
+A1 after the: int main()::A::fun(int&)
+
+A1 const before the: unknown
+A1 const before the: unknown
+int main()::A::fun(int&) const
+A1 const after the: int main()::A::fun(int&) const
+A1 const after the: int main()::A::fun(int&) const
+
+A1 before the: unknown
+A1 const before the: unknown
+destroy fun
+const A1 error in the: unknown
+A1 error in the: unknown
+error test
+```
