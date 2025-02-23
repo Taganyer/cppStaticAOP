@@ -71,11 +71,11 @@ static void AOP_Wrapper_test() {
 #endif
         };
 
-        /// std::exception_ptr & 不起作用。
-        void error(const std::exception_ptr &) {
+        bool error(std::exception_ptr &) {
 #ifdef AOP_WILL_USE_SOURCE_LOCATION
             cerr << "A1 error in the: " << AOPthreadLoc.function() << endl;
 #endif
+            return true;
         };
     };
 
@@ -104,10 +104,11 @@ static void AOP_Wrapper_test() {
 #endif
         };
 
-        void error(const std::exception_ptr &) const {
+        bool error(const std::exception_ptr &) const {
 #ifdef AOP_WILL_USE_SOURCE_LOCATION
             cerr << "A2 const error in the: " << AOPthreadLoc.function() << endl;
 #endif
+            return false;
         };
     };
 
@@ -138,14 +139,13 @@ static void AOP_Wrapper_test() {
     A a(1);
 
     AOP aop { A1(), A2() };
-    static_assert(is_same_v<decltype(aop.get_aspect<0>()), A1&>);
-    static_assert(is_same_v<decltype(aop.get_aspect<1>()), A2&>);
-    static_assert(is_same_v<decltype(aop), AOP<A1, A2>>);
     AOP_Wrapper aop_w1(a, aop);
     static_assert(is_same_v<decltype(aop_w1), AOP_Wrapper<A, AOP<A1, A2>>>);
     AOP_Wrapper aop_w2(a, std::move(aop));
     static_assert(is_same_v<decltype(aop_w2), AOP_Wrapper<A, AOP<A1, A2>>>);
     AOP_Wrapper aop_w3(a, A1());
+    static_assert(is_same_v<decltype(aop_w3), AOP_Wrapper<A, A1>>);
+    AOP_Wrapper<A, A1, A2> aop_w4(a, aop);
 
     AOP_Wrapper<A, A1, const A2> AOP_A { a, A1(), A2() };
     cout << "use AOP:" << endl;
@@ -309,7 +309,7 @@ static void AOP_Object_test() {
     };
 
     struct A3 : public A2 {
-        A3() { cout << "A3" << endl; };
+        // A3() { cout << "A3" << endl; };
         A3(const A3 &) { cout << "A3::A3(const A3 &)" << endl; };
         A3(int, int) { cout << "A3::A3(int, int)" << endl; };
     };
@@ -317,238 +317,22 @@ static void AOP_Object_test() {
     AOP aop1 { A1(), A2() };
     A2 a2;
     AOP aop2 { A1(), a2 };
-    AOP aop3 { A1(), A3(0, 0) };
-    AOP<A1, A2> aop4 { aop3 };
+    AOP aop3 { A1(), aop1 };
+    static_assert(is_same_v<decltype(aop3), AOP<A1, AOP<A1, A2>>>);
+    AOP aop4 { aop2 }, aop5 { std::move(aop2) };
+    static_assert(is_same_v<decltype(aop2), decltype(aop2)>);
     cout << "aop end" << endl;
     AOP_Wrapper t { a2, std::move(aop1) };
     AOP_Wrapper t1 { a2, aop2 };
     cout << "wrapper end" << endl;
     AOP_Object<A1, A1, A2> object { std::move(aop2) };
-    const AOP_Object<A3, A1, A2> o { aop3, A3(1, 1) };
+    const AOP_Object o { aop2, A3(1, 1) };
     cout << "aop_object end" << endl;
     AOP_Object_Agent(o, destroy);
 }
 
-void Test::construct_test() {
-    cout << "construct_test:" << endl;
-    class A {
-    public:
-        A() { cout << "A" << endl; };
-
-        A(const A &) { cout << "A::A(const A &)" << endl; };
-
-        A(A &&) noexcept { cout << "A::A(A &&)" << endl; };
-
-        A(int) { cout << "A::A(int)" << endl; };
-    };
-
-    struct A1 {
-        A1() { cout << "A1" << endl; };
-
-        A1(A1 &) { cout << "A1::A1(A1 &)" << endl; };
-
-        A1(const A1 &) { cout << "A1::A1(const A1 &)" << endl; };
-
-        A1(A1 &&) noexcept { cout << "A1::A1(A1 &&)" << endl; };
-    };
-
-    struct A2 : A {
-        A2() { cout << "A2" << endl; };
-
-        A2(A2 &) { cout << "A2::A2(A2 &)" << endl; };
-
-        A2(const A2 &) { cout << "A2::A2(const A2 &)" << endl; };
-
-        A2(A2 &&) noexcept { cout << "A2::A2(A2 &&)" << endl; };
-    };
-
-    A a;
-    A1 a1;
-    A2 a2;
-    cout << "A A1 A2 end" << endl;
-
-    AOP aop1 { A1(), A2() };
-    static_assert(is_same_v<decltype(aop1), AOP<A1, A2>>);
-    cout << "aop1 end" << endl;
-
-    AOP aop2 { a1, aop1 };
-    static_assert(is_same_v<decltype(aop2), AOP<A1, AOP<A1, A2>>>);
-    cout << "aop2 end" << endl;
-
-    AOP aop3 { aop1, std::move(aop2) };
-    static_assert(is_same_v<decltype(aop3), AOP<AOP<A1, A2>, AOP<A1, AOP<A1, A2>>>>);
-    cout << "aop3 end" << endl;
-
-    AOP_Wrapper w1 { a, a1, a2 };
-    static_assert(is_same_v<decltype(w1), AOP_Wrapper<A, A1, A2>>);
-    cout << "w1 end" << endl;
-
-    AOP_Wrapper<A, A1, A2> w2 { a2, aop1 }, w3 { a, aop1 };
-    cout << "w2 w3 end" << endl;
-
-    AOP_Wrapper<A, A> w4 { a2, a2 };
-    cout << "w4 end" << endl;
-
-    AOP_Wrapper w5 { w4 };
-    assert(w5.get_class_ptr() == w4.get_class_ptr());
-    cout << "w5 end" << endl;
-
-    AOP_Wrapper<A, A> w6 { AOP_Wrapper { a, a2 } };
-    assert(w6.get_class_ptr() == w1.get_class_ptr());
-    static_assert(is_same_v<decltype(w5), decltype(w4)>);
-    cout << "w6 end" << endl;
-
-    AOP_Wrapper w7 { std::move(w6) };
-    static_assert(is_same_v<decltype(w6), decltype(w7)>);
-    cout << "w7 end" << endl;
-
-    AOP_Object o1 { aop1, A() };
-    static_assert(is_same_v<decltype(o1), AOP_Object<A, A1, A2>>);
-    cout << "o1 end" << endl;
-
-    AOP_Object<A, A1, A2> o2 { std::move(aop1), 0 },
-                          o3 { o2 };
-    cout << "o2 o3 end" << endl;
-
-    AOP_Object<A, A1, A> o4 { std::move(o3) };
-    cout << "o4 end" << endl;
-
-    struct T {
-        T() = default;
-        T(const T &) = delete;
-        T(T &&) { cout << "T::T(T &&)" << endl; };
-
-        T& operator=(const T &) {
-            cout << "T& operator(const T&)" << endl;
-            return *this;
-        };
-
-        T& operator=(T &&) {
-            cout << "T& operator(T&&)" << endl;
-            return *this;
-        };
-    };
-
-    AOP<T, T> t1, t2(std::move(t1));
-    t2 = std::move(t1);
-}
-
-static void example() {
-#ifdef AOP_WILL_USE_SOURCE_LOCATION /// 用于获得调用函数名称，可以不使用它（删除位于 AOP.hpp 的该宏）
-    using namespace std;
-    using namespace Base;
-    class A {
-    public:
-        A(int a) : a(a) {};
-
-        static int static_fun() {
-            AOP_FUN_MARK /// 这里是用于获得函数名称，你可以选择不使用。
-            cout << CURRENT_FUN_LOCATION.function() << endl;
-            return 0;
-        }
-
-        int fun(int &) {
-            AOP_FUN_MARK
-            cout << CURRENT_FUN_LOCATION.function() << endl;
-            return 1;
-        };
-
-        int fun(int &) const {
-            AOP_FUN_MARK
-            cout << CURRENT_FUN_LOCATION.function() << endl;
-            return 2;
-        };
-
-        void raise_error() const {
-            throw runtime_error("A::raise_error()");
-        };
-
-    private:
-        int a = 0;
-    };
-
-    /// 你可以有选择的定义以下函数。
-    struct A1 {
-        void before() {
-            cout << "A1 before the: " << Base::AOPthreadLoc.function() << endl;
-        };
-
-        void after() {
-            cout << "A1 after the: " << Base::AOPthreadLoc.function() << endl;
-        };
-
-        void before() const {
-            cout << "A1 const before the: " << Base::AOPthreadLoc.function() << endl;
-        };
-
-        void after() const {
-            cout << "A1 const after the: " << Base::AOPthreadLoc.function() << endl;
-        };
-
-        /// std::exception_ptr & 不起作用。
-        void error(const std::exception_ptr &) {
-            cerr << "A1 error in the: " << Base::AOPthreadLoc.function() << endl;
-        };
-
-        void error(const std::exception_ptr &) const {
-            cerr << "const A1 error in the: " << Base::AOPthreadLoc.function() << endl;
-        };
-
-        void destroy() {
-            cout << "destroy fun" << endl;
-        }
-    };
-
-    AOP aop { A1(), A1() };
-    static_assert(is_same_v<decltype(aop), AOP<A1, A1>>);
-    auto fun = [] {
-        AOP_FUN_MARK
-        cout << "lambda fun" << endl;
-        return 0;
-    };
-    int o_O = aop.invoke(fun);
-    cout << endl;
-
-    A a(1);
-    AOP_Wrapper<A, A1, const A1> wrapper{a};
-    const AOP_Wrapper<A, A1, const A1> &const_wrapper = wrapper;
-    /// 你可以通过两种方式调用 A 的成员函数。
-    /// WARN: C++17 无法自动推断同名函数的成员函数指针，需手动指定。
-    int (A::*fun_non_const)(int &) = &A::fun;
-    int (A::*fun_const)(int &) const = &A::fun;
-    int t = 0;
-    t = wrapper.invoke(fun_non_const, t);
-    cout << endl;
-    t = wrapper.invoke(fun_const, t);
-    cout << endl;
-    t = AOP_Wrapper_Agent(wrapper, fun, t);
-    cout << endl;
-    t = AOP_Wrapper_Agent(const_wrapper, fun, t);
-    cout << endl;
-
-    AOP<A1, const A1> aop1;
-    AOP_Object object {aop1, a}; /// 注意第一个参数必须是 AOP 的左值或右值（与 AOP_Wrapper 不同），其余参数用于构造 A。
-    static_assert(is_same_v<decltype(object), AOP_Object<A, A1, const A1>>);
-    const AOP_Object<A, A1, const A1> &const_object = object;
-    t = object.invoke(fun_non_const, t);
-    cout << endl;
-    t = object.invoke(fun_const, t);
-    cout << endl;
-    t = AOP_Object_Agent(object, fun, t);
-    cout << endl;
-    t = AOP_Object_Agent(const_object, fun, t);
-    cout << endl;
-
-    try {
-        AOP_Object_Agent(object, raise_error);
-    } catch (runtime_error &) {
-        cerr << "error test" << endl;
-    }
-#endif
-}
-
 void Test::AOP_test() {
-    // AOP_Wrapper_test();
+    AOP_Wrapper_test();
     // AOP_Object_test();
-    example();
 };
+

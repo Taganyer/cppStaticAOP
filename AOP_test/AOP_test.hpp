@@ -14,8 +14,6 @@ namespace Test {
 
     void AOP_test();
 
-    void construct_test();
-
 }
 
 #endif
